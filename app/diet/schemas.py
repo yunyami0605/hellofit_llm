@@ -3,12 +3,14 @@ from typing import List, Dict, Optional
 from datetime import date
 import uuid
 
+from app.diet.dummy import HISTORY_EXAMPLE
+
 class FoodRecord(BaseModel):
     name: str
-    calories: float
-    protein: float
-    carbs: float
-    fat: float
+    calories: Optional[int] = 0
+    protein: Optional[int] = 0
+    carbs: Optional[int] = 0
+    fat: Optional[int] = 0
 
 class MealRecord(BaseModel):
     foods: List[FoodRecord]
@@ -45,7 +47,11 @@ class DietAutoRequest(BaseModel):
             "forbidden_foods": ["햄버거", "콜라"]  # 금지 음식 예시
         }
     )
+    history: Dict[date, Dict[str, MealRecord]] = Field(
+        ..., 
+    example=HISTORY_EXAMPLE)
     # 오늘 포함 30일 전 기록 + 미래 추천 기록(최대 6일)까지 가능
+    '''
     history: Dict[date, Dict[str, MealRecord]] = Field(
         ..., 
         example={
@@ -80,10 +86,10 @@ class DietAutoRequest(BaseModel):
             }
         }
     )
-
+    '''
 # 특정 날짜에서 특정 끼니 식단 재생성 요청
 class DietRegenerateRequest(DietAutoRequest):
-    meal_type: str = Field(..., example="DINNER")
+    meal_type: str = Field(..., example="DINNER", description="재생성할 끼니 (BREAKFAST / LUNCH / DINNER 중 하나)")
 
 class DietRecommendation(BaseModel):
     recommendation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))

@@ -22,3 +22,7 @@ async def batch_recommend_diet(req: DietAutoRequest):
 async def regenerate_diet(date: str, req: DietRegenerateRequest):
     return await service.regenerate(date, req.user_profile, req.history, req.meal_type)
 
+# 특정 날짜의 3끼 식단 재생성 API
+@router.post("/{date}/regenerate/day", summary="특정 날짜의 전체 식단 재생성 API", response_model=list[DietRecommendation])
+async def regenerate_day_diet(date: str, req: DietAutoRequest):
+    return await service.regenerate_day(date, req.user_profile, req.history)
