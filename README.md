@@ -92,10 +92,10 @@
 아래 명령어를 사용하여 FastAPI 개발 서버를 실행합니다.
 
 ```bash
-poetry run uvicorn app.main:app --reload --port 8001
+poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8081
 ```
 
-서버가 실행되면 `http://127.0.0.1:8001/docs`에서 API 문서를 확인할 수 있습니다.
+서버가 실행되면 `http://127.0.0.1:8081/docs`에서 API 문서를 확인할 수 있습니다.
 
 ### 5. 프로젝트 구조
 
@@ -119,6 +119,26 @@ poetry run uvicorn app.main:app --reload --port 8001
 주요 API 엔드포인트는 다음과 같습니다.
 
 - `GET /health`: 서버 상태 확인
+
+### Chat API
+
+- `POST /generate`
+  - Request:
+    ```json
+    {
+      "prompt": "문장 또는 질문",
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "system": "선택적 시스템 프롬프트"
+    }
+    ```
+  - Response:
+    ```json
+    { "text": "모델 응답 텍스트" }
+    ```
+  - 인증: 선택적
+    - LLM 서버 환경변수에 `SERVICE_API_KEY`를 설정한 경우, 요청 헤더에 `Authorization: Bearer <SERVICE_API_KEY>` 가 필요합니다.
+    - 스프링 서버에서는 `application.yml`에 `hellofit.llm.api-key` 를 동일 값으로 설정하세요.
 
 ### Diet API (`/recommend/diet`)
 
