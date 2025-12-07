@@ -1,13 +1,14 @@
 import os
 import asyncmy
-from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores import Chroma
 from langchain_openai import OpenAIEmbeddings
 from langchain.schema import Document
 
 class FoodVectorStore:
-    def __init__(self):
+    def __init__(self, persist_directory: str = "chroma_index"):
         self.embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
         self.vectorstore = None
+        self.persist_directory = persist_directory
 
     async def build_index(self):
         conn = await asyncmy.connect(
@@ -57,14 +58,19 @@ class FoodVectorStore:
                 }
             ))
 
-        self.vectorstore = FAISS.from_documents(docs, self.embeddings)
-        self.vectorstore.save_local("faiss_index")
+        # Build Chroma index and persist to disk
+        self.vectorstore = Chroma.from_documents(
+            documents=docs,
+            embedding=self.embeddings,
+            persist_directory=self.persist_directory
+        )
+        self.vectorstore.persist()
 
     def load_index(self):
-        self.vectorstore = FAISS.load_local(
-            "faiss_index",
-            self.embeddings,
-            allow_dangerous_deserialization=True
+        # Load existing Chroma index
+        self.vectorstore = Chroma(
+            persist_directory=self.persist_directory,
+            embedding_function=self.embeddings
         )
 
     def get_retriever(self, k=10):
