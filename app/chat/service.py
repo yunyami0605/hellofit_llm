@@ -57,6 +57,67 @@ class ChatService:
         logger.info(f"[generate] assistant: {response_text}")
         return response_text
 
+    def generate_stream(
+        self,
+        prompt: str,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        system: Optional[str] = None,
+    ):
+        """
+        OpenAI 스트리밍을 사용해 delta를 순차적으로 yield.
+        - 프론트에서 청크 단위로 표시하기 위한 용도
+        - RAG 컨텍스트(가능 시) + system 프롬프트를 동일하게 적용
+        """
+        llm = ChatOpenAI(
+            model=model or self.default_model,
+            temperature=temperature if temperature is not None else 0.7,
+            streaming=True,
+        )
+        messages = []
+
+        # RAG 컨텍스트 구성(가능한 경우)
+        context_text = ""
+        if self.retriever is not None and prompt:
+            try:
+                docs = self.retriever.invoke(prompt)
+                if docs:
+                    context_text = "\n".join([d.page_content for d in docs])
+            except Exception as e:
+                logger.warning(f"[generate_stream] retriever error ignored: {e}")
+
+        if system:
+            messages.append(SystemMessage(content=system))
+        if context_text:
+            messages.append(SystemMessage(content=f"다음 음식/영양 컨텍스트를 참고해서 답변하세요:\n{context_text}"))
+        messages.append(HumanMessage(content=prompt))
+
+        logger.info(f"[generate_stream] user: {prompt}")
+
+        def _extract_text(content) -> str:
+            # langchain chunk content는 str 또는 list(파트)일 수 있음
+            if content is None:
+                return ""
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                parts = []
+                for p in content:
+                    # 보수적으로 text만 수집
+                    if isinstance(p, str):
+                        parts.append(p)
+                    elif isinstance(p, dict):
+                        t = p.get("text")
+                        if isinstance(t, str):
+                            parts.append(t)
+                return "".join(parts)
+            return ""
+
+        for chunk in llm.stream(messages):
+            delta = _extract_text(getattr(chunk, "content", ""))
+            if delta:
+                yield delta
+
     def chat(
         self,
         messages: List[ChatMessage],
